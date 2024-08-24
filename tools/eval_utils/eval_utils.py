@@ -91,6 +91,7 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=Fal
         metric = common_utils.merge_results_dist([metric], world_size, tmpdir=result_dir / 'tmpdir')
 
     logger.info('*************** Performance of EPOCH %s *****************' % epoch_id)
+
     sec_per_example = (time.time() - start_time) / len(dataloader.dataset)
     logger.info('Generate label finished(sec_per_example: %.4f second).' % sec_per_example)
 
@@ -191,6 +192,8 @@ def eval_map_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test
     if dist_test:
         all_preds_dict = common_utils.merge_results_dist(all_preds_dict, len(dataset), tmpdir=result_dir / 'tmpdir')
     logger.info('*************** Performance of EPOCH %s *****************' % epoch_id)
+    logger.info(len(dataloader.dataset))
+
     sec_per_example = (time.time() - start_time) / len(dataloader.dataset)
     logger.info('Generate label finished(sec_per_example: %.4f second).' % sec_per_example)
 

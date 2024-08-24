@@ -8,6 +8,8 @@ from pcdet.models.model_utils.unitr_utils import MapImage2Lidar, MapLidar2Image
 from pcdet.models.model_utils.dsvt_utils import PositionEmbeddingLearned
 from pcdet.models.backbones_3d.dsvt import _get_activation_fn, DSVTInputLayer
 from pcdet.ops.ingroup_inds.ingroup_inds_op import ingroup_inds
+from deformable_attention import DeformableAttention
+
 get_inner_win_inds_cuda = ingroup_inds
 
 class UniTR(nn.Module):
@@ -39,7 +41,7 @@ class UniTR(nn.Module):
         self.image_pos_num, self.lidar_pos_num = set_info[0][-1], set_info[0][-1]
         self.accelerate = self.model_cfg.get('ACCELERATE', False)
         self.use_map = use_map
-
+        self.prev_output = None  # 이전 시퀀스의 출력 데이터를 저장할 변수
         self.image_input_layer = UniTRInputLayer(
             self.model_cfg.IMAGE_INPUT_LAYER, self.accelerate)
         self.lidar_input_layer = UniTRInputLayer(
@@ -158,6 +160,8 @@ class UniTR(nn.Module):
                 - voxel_coords (Tensor[int]):
                 - image_features (Tensor[float]):
         '''
+        print("\n [UniTR] Forward time")
+        prev_x = self.prev_output
         # lidar(3d) and image(2d) preprocess
         multi_feat, voxel_info, patch_info, multi_set_voxel_inds_list, multi_set_voxel_masks_list, multi_pos_embed_list = self._input_preprocess(
             batch_dict)

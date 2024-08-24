@@ -5,11 +5,10 @@ import torch.nn as nn
 import numpy as np
 from ...ops.iou3d_nms import iou3d_nms_utils
 from ...utils.spconv_utils import find_all_spconv_keys
-from .. import backbones_2d, backbones_3d, dense_heads, roi_heads
+from .. import backbones_2d, backbones_3d, dense_heads, roi_heads, tsa_layer
 from ..backbones_2d import map_to_bev
 from ..backbones_3d import pfe, vfe
 from ..model_utils import model_nms_utils
-
 
 class Detector3DTemplate(nn.Module):
     def __init__(self, model_cfg, num_class, dataset):
@@ -121,6 +120,34 @@ class Detector3DTemplate(nn.Module):
         model_info_dict['num_point_features'] = pfe_module.num_point_features
         model_info_dict['num_point_features_before_fusion'] = pfe_module.num_point_features_before_fusion
         return pfe_module, model_info_dict
+
+    # def build_tsa_layer(self, model_info_dict):
+    #     if self.model_cfg.get('TSA_LAYER', None) is None:
+    #         return None, model_info_dict
+
+    #     tsa_module = tsa_layer.__all__[self.model_cfg.TSA_LAYER.NAME](
+    #         embed_dim=self.model_cfg.TSA_LAYER.EMBED_DIM,
+    #         num_heads=self.model_cfg.TSA_LAYER.NUM_HEADS,
+    #         num_levels=self.model_cfg.TSA_LAYER.NUM_LEVELS,
+    #         num_points=self.model_cfg.TSA_LAYER.NUM_POINTS
+    #     )
+        
+    #     # 추가된 TSA Layer 관련 설정 가져오기
+    #     sequence_length = self.model_cfg.TSA_LAYER.SEQUENCE_LENGTH
+    #     spatial_shapes = self.model_cfg.TSA_LAYER.SPATIAL_SHAPES
+    #     level_start_index = self.model_cfg.TSA_LAYER.LEVEL_START_INDEX
+    #     reference_points = self.model_cfg.TSA_LAYER.REFERENCE_POINTS
+
+    #     # 필요한 경우 model_info_dict에 추가할 수 있음
+    #     model_info_dict['sequence_length'] = sequence_length
+    #     model_info_dict['spatial_shapes'] = spatial_shapes
+    #     model_info_dict['level_start_index'] = level_start_index
+    #     model_info_dict['reference_points'] = reference_points
+
+    #     model_info_dict['module_list'].append(tsa_module)
+    #     return tsa_module, model_info_dict
+
+
 
     def build_dense_head(self, model_info_dict):
         if self.model_cfg.get('DENSE_HEAD', None) is None:

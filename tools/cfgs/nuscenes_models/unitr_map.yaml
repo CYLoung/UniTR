@@ -4,8 +4,8 @@ DATA_CONFIG:
     _BASE_CONFIG_: cfgs/dataset_configs/nuscenes_dataset.yaml
     POINT_CLOUD_RANGE: [-51.2, -51.2, -5.0, 51.2, 51.2, 3.0]
     INFO_PATH: {
-      'train': [nuscenes_infos_10sweeps_train.pkl],
-      'test': [nuscenes_infos_10sweeps_val.pkl],
+      'train': [/root/src/nuScenes/v1.0-mini/nuscenes_infos_10sweeps_train.pkl],
+      'test': [/root/src/nuScenes/v1.0-mini/nuscenes_infos_10sweeps_val.pkl],
     }
 
     CAMERA_CONFIG:
@@ -46,7 +46,7 @@ DATA_CONFIG:
         - NAME: shuffle_points
           SHUFFLE_ENABLED: {
             'train': True,
-            'test': True
+            'test': False #True
           }
 
         - NAME: transform_points_to_voxels_placeholder
@@ -62,15 +62,16 @@ DATA_CONFIG:
           classes: ['drivable_area', 'ped_crossing', 'walkway', 'stop_line', 'carpark_area', 'divider']
           xbound: [-50.0, 50.0, 0.5]
           ybound: [-50.0, 50.0, 0.5]
-          dataset_root: '../data/nuscenes/v1.0-trainval'
+          dataset_root: '/root/src/nuScenes/v1.0-mini'
           location: ['singapore-onenorth', 'singapore-hollandvillage', 'singapore-queenstown', 'boston-seaport']
 
 MODEL:
     NAME: UniTRMAP
-  
+    
     MM_BACKBONE:
       NAME: UniTR
       PATCH_EMBED:
+        num_frames : 5
         in_channels: 3
         image_size: [256, 704]
         embed_dims: 128
@@ -157,6 +158,17 @@ MODEL:
       NUM_UPSAMPLE_FILTERS: [256, 256, 256, 256]
       USE_CONV_FOR_NO_STRIDE: True
 
+    TSA_LAYER:
+      NAME: TSALayer
+      EMBED_DIM: 128
+      NUM_HEADS: 8
+      NUM_LEVELS: 4
+      NUM_POINTS: 4
+      SEQUENCE_LENGTH: 5  # 시퀀스 길이 설정
+      SPATIAL_SHAPES: [[30, 30, 1]]  # 예시로 설정된 spatial shape
+      LEVEL_START_INDEX: [0]
+      REFERENCE_POINTS: [[15, 15, 0]]
+
     DENSE_HEAD:
         CLASS_AGNOSTIC: False
         NAME: BEVSegmentationHead
@@ -173,7 +185,7 @@ MODEL:
         SCORE_THRESH: 0.1
         OUTPUT_RAW_SCORE: False
 
-        EVAL_METRIC: kitti
+        EVAL_METRIC: nuscenes #kitti
 
         NMS_CONFIG:
             MULTI_CLASSES_NMS: True
@@ -185,7 +197,7 @@ MODEL:
 
 
 OPTIMIZATION:
-    BATCH_SIZE_PER_GPU: 3
+    BATCH_SIZE_PER_GPU: 1
     NUM_EPOCHS: 20
 
     OPTIMIZER: adam_onecycle

@@ -38,13 +38,30 @@ class NuScenesDataset(DatasetTemplate):
         if self.training and self.dataset_cfg.get('BALANCED_RESAMPLING', False):
             self.infos = self.balanced_infos_resampling(self.infos)
 
+    # def include_nuscenes_data(self, mode):
+    #     self.logger.info('Loading NuScenes dataset')
+    #     nuscenes_infos = []
+
+    #     for info_path in self.dataset_cfg.INFO_PATH[mode]:
+    #         print("here",info_path)
+    #         info_path = self.root_path / info_path
+    #         if not info_path.exists():
+    #             continue
+    #         with open(info_path, 'rb') as f:
+    #             infos = pickle.load(f)
+    #             nuscenes_infos.extend(infos)
+
+    #     self.infos.extend(nuscenes_infos)
+    #     self.logger.info('Total samples for NuScenes dataset: %d' % (len(nuscenes_infos)))
     def include_nuscenes_data(self, mode):
         self.logger.info('Loading NuScenes dataset')
         nuscenes_infos = []
 
         for info_path in self.dataset_cfg.INFO_PATH[mode]:
             info_path = self.root_path / info_path
+            self.logger.info(f"Checking info path: {info_path}")
             if not info_path.exists():
+                self.logger.warning(f"Info path {info_path} does not exist.")
                 continue
             with open(info_path, 'rb') as f:
                 infos = pickle.load(f)
@@ -466,7 +483,7 @@ def create_nuscenes_info(version, data_path, save_path, max_sweeps=10, with_cam=
     from . import nuscenes_utils
     data_path = data_path / version
     save_path = save_path / version
-
+    print("debug 1")
     assert version in ['v1.0-trainval', 'v1.0-test', 'v1.0-mini']
     if version == 'v1.0-trainval':
         train_scenes = splits.train
@@ -475,6 +492,7 @@ def create_nuscenes_info(version, data_path, save_path, max_sweeps=10, with_cam=
         train_scenes = splits.test
         val_scenes = []
     elif version == 'v1.0-mini':
+        print("why!!!!!")
         train_scenes = splits.mini_train
         val_scenes = splits.mini_val
     else:
@@ -524,20 +542,24 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.func == 'create_nuscenes_infos':
+
         dataset_cfg = EasyDict(yaml.safe_load(open(args.cfg_file)))
-        ROOT_DIR = (Path(__file__).resolve().parent / '../../../').resolve()
+        # ROOT_DIR = (Path(__file__).resolve().parent / '../../../').resolve()
+        ROOT_DIR = Path('/root/src/nuScenes')
+
+        print("this root", ROOT_DIR)
         dataset_cfg.VERSION = args.version
         create_nuscenes_info(
             version=dataset_cfg.VERSION,
-            data_path=ROOT_DIR / 'data' / 'nuscenes',
-            save_path=ROOT_DIR / 'data' / 'nuscenes',
+            data_path=ROOT_DIR ,
+            save_path=ROOT_DIR ,
             max_sweeps=dataset_cfg.MAX_SWEEPS,
             with_cam=args.with_cam
         )
 
         nuscenes_dataset = NuScenesDataset(
             dataset_cfg=dataset_cfg, class_names=None,
-            root_path=ROOT_DIR / 'data' / 'nuscenes',
+            root_path=ROOT_DIR,
             logger=common_utils.create_logger(), training=True
         )
         nuscenes_dataset.create_groundtruth_database(
@@ -545,3 +567,36 @@ if __name__ == '__main__':
             with_cam_gt=args.with_cam_gt, 
             share_memory=args.share_memory
         )
+        # dataset_cfg = EasyDict(yaml.safe_load(open('./tools/cfgs/dataset_configs/nuscenes_dataset.yaml')))
+        # ROOT_DIR = Path('/root/src/nuScenes')
+        # dataset_cfg.VERSION = 'v1.0-mini'
+        # dataset_cfg.DATA_PATH = str(ROOT_DIR / 'v1.0-mini')
+        # dataset_cfg.INFO_PATH = {
+        #     'train': ['nuscenes_infos_10sweeps_train.pkl'],
+        #     'test': ['nuscenes_infos_10sweeps_val.pkl'],
+        # }
+        # print("in creat 1")
+
+        # create_nuscenes_info(
+        #     version=dataset_cfg.VERSION,
+        #     data_path=ROOT_DIR / 'v1.0-mini',
+        #     save_path=ROOT_DIR / 'v1.0-mini',
+        #     max_sweeps=dataset_cfg.MAX_SWEEPS,
+        #     with_cam=dataset_cfg.get('WITH_CAM', False)
+        # )
+        # print("in nu 2")
+
+        # nuscenes_dataset = NuScenesDataset(
+        #     dataset_cfg=dataset_cfg,
+        #     class_names=None,
+        #     root_path=ROOT_DIR / 'v1.0-mini',
+        #     logger=common_utils.create_logger(),
+        #     training=True
+        # )
+        # print("in nu 3")
+
+        # nuscenes_dataset.create_groundtruth_database(
+        #     max_sweeps=dataset_cfg.MAX_SWEEPS,
+        #     with_cam_gt=False,
+        #     share_memory=False
+        # )

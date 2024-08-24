@@ -1,5 +1,5 @@
 from .detector3d_template import Detector3DTemplate
-from .. import backbones_image, view_transforms, mm_backbone,dense_heads
+from .. import backbones_image, view_transforms, mm_backbone,dense_heads, tsa_layer
 from ..backbones_image import img_neck
 from ..backbones_2d import fuser
 from ...utils.spconv_utils import find_all_spconv_keys
@@ -10,10 +10,11 @@ class UniTRMAP(Detector3DTemplate):
         self.module_topology = [
             'vfe','mm_backbone', 'map_to_bev_module',
             'neck','vtransform', 'fuser',
-            'backbone_2d','dense_head',
+            'backbone_2d','tsa_layer', 'dense_head',
         ]
         self.module_list = self.build_networks()
         self.time_list = []
+        self.prev_data = []
        
     def build_neck(self,model_info_dict):
         if self.model_cfg.get('NECK', None) is None:
@@ -59,6 +60,65 @@ class UniTRMAP(Detector3DTemplate):
         model_info_dict['module_list'].append(mm_backbone_module)
 
         return mm_backbone_module, model_info_dict
+    # def build_tsa_layer(self, model_info_dict):
+    #     # prev data 도 집어넣고 
+    #     # 결과적으로 현재 시퀀스 내용을 받아서 prev 에 업데이트 하는 것도 추가 
+    #     # [] 저장, 넘기고 업데이트 하는 것 부터 확인
+    #     if self.model_cfg.get('TSA_LAYER', None) is None:
+    #         return None, model_info_dict
+
+    #     tsa_module = tsa_layer.__all__[self.model_cfg.TSA_LAYER.NAME](
+    #         embed_dim=self.model_cfg.TSA_LAYER.EMBED_DIM,
+    #         num_heads=self.model_cfg.TSA_LAYER.NUM_HEADS,
+    #         num_levels=self.model_cfg.TSA_LAYER.NUM_LEVELS,
+    #         num_points=self.model_cfg.TSA_LAYER.NUM_POINTS
+    #     )
+        
+    #     # 추가된 TSA Layer 관련 설정 가져오기
+    #     sequence_length = self.model_cfg.TSA_LAYER.SEQUENCE_LENGTH
+    #     spatial_shapes = self.model_cfg.TSA_LAYER.SPATIAL_SHAPES
+    #     level_start_index = self.model_cfg.TSA_LAYER.LEVEL_START_INDEX
+    #     reference_points = self.model_cfg.TSA_LAYER.REFERENCE_POINTS
+
+    #     # 필요한 경우 model_info_dict에 추가할 수 있음
+    #     model_info_dict['sequence_length'] = sequence_length
+    #     model_info_dict['spatial_shapes'] = spatial_shapes
+    #     model_info_dict['level_start_index'] = level_start_index
+    #     model_info_dict['reference_points'] = reference_points
+
+    #     model_info_dict['module_list'].append(tsa_module)
+    #     return tsa_module, model_info_dict
+    def build_tsa_layer(self, model_info_dict):
+        # prev data 도 집어넣고 
+        # 결과적으로 현재 시퀀스 내용을 받아서 prev 에 업데이트 하는 것도 추가 
+        # [] 저장, 넘기고 업데이트 하는 것 부터 확인
+        if self.model_cfg.get('TSA_LAYER', None) is None:
+            return None, model_info_dict
+
+        tsa_module = tsa_layer.__all__[self.model_cfg.TSA_LAYER.NAME](
+            embed_dim=self.model_cfg.TSA_LAYER.EMBED_DIM,
+            num_heads=self.model_cfg.TSA_LAYER.NUM_HEADS,
+            num_levels=self.model_cfg.TSA_LAYER.NUM_LEVELS,
+            num_points=self.model_cfg.TSA_LAYER.NUM_POINTS
+        )
+        
+        # 추가된 TSA Layer 관련 설정 가져오기
+        sequence_length = self.model_cfg.TSA_LAYER.SEQUENCE_LENGTH
+        spatial_shapes = self.model_cfg.TSA_LAYER.SPATIAL_SHAPES
+        level_start_index = self.model_cfg.TSA_LAYER.LEVEL_START_INDEX
+        reference_points = self.model_cfg.TSA_LAYER.REFERENCE_POINTS
+
+        # 필요한 경우 model_info_dict에 추가할 수 있음
+        model_info_dict['sequence_length'] = sequence_length
+        model_info_dict['spatial_shapes'] = spatial_shapes
+        model_info_dict['level_start_index'] = level_start_index
+        model_info_dict['reference_points'] = reference_points
+
+        model_info_dict['module_list'].append(tsa_module)
+        return tsa_module, model_info_dict
+
+
+
     
     def build_dense_head(self, model_info_dict):
         if self.model_cfg.get('DENSE_HEAD', None) is None:
@@ -115,7 +175,14 @@ class UniTRMAP(Detector3DTemplate):
         return state_dict, update_model_state
 
     def forward(self, batch_dict):
-        for cur_module in self.module_list:
+        for i, cur_module in enumerate(self.module_list):
+            if i == 4:
+                print(i)
+                print("MODULE :", cur_module)
+                x = i
+                batch_dict = cur_module(batch_dict, x, self.prev_data)
+                self.prev_data = i
+
             batch_dict = cur_module(batch_dict)
 
         if self.training:

@@ -284,6 +284,7 @@ class DataProcessor(object):
         return data_dict
 
     def load_bev_segmentation(self, data_dict=None, config=None):
+        import os
         if data_dict is None:
             from nuscenes.map_expansion.map_api import NuScenesMap
             xbound = config.xbound
@@ -295,8 +296,15 @@ class DataProcessor(object):
             config.patch_size = (patch_h, patch_w)
             config.canvas_size = (canvas_h, canvas_w)
             self.maps = {}
+            # for location in config.location:
+            #     print(config.dataset_root)
+            #     self.maps[location] = NuScenesMap(config.dataset_root, location)
             for location in config.location:
+                map_path = os.path.join(config.dataset_root, 'maps', location + '.json')
+                if not os.path.exists(map_path):
+                    raise FileNotFoundError(f"{map_path} does not exist. Ensure the dataset is correctly set up.")
                 self.maps[location] = NuScenesMap(config.dataset_root, location)
+                        
             return partial(self.load_bev_segmentation, config=config)
 
         lidar_aug_matrix = data_dict["lidar_aug_matrix"].copy()

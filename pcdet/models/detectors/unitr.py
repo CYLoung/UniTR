@@ -3,7 +3,6 @@ from .. import backbones_image, view_transforms, mm_backbone
 from ..backbones_image import img_neck
 from ..backbones_2d import fuser
 from ...utils.spconv_utils import find_all_spconv_keys
-
 class UniTR(Detector3DTemplate):
     def __init__(self, model_cfg, num_class, dataset):
         super().__init__(model_cfg=model_cfg, num_class=num_class, dataset=dataset)
